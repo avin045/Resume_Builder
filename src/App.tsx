@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
-import type { CSSProperties, Dispatch, SetStateAction } from 'react';
+import { Component, useMemo, useState } from 'react';
+import ResumeDashboard from './features/dashboard/ResumeDashboard';
+import type { CSSProperties, Dispatch, ReactNode, SetStateAction } from 'react';
 
 type ViewKey = 'dashboard' | 'editor' | 'templates' | 'export';
 
@@ -26,6 +27,30 @@ const starterResume: Resume = {
   skills: ['UX strategy', 'Design systems', 'Prototyping', 'User research'],
   updatedAt: 'Today',
 };
+
+
+class AppErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <section className="dashboard-error" role="alert">
+          <p className="eyebrow">Resume dashboard</p>
+          <h2>We could not load your resumes.</h2>
+          <p>Refresh the page to try again. Your browser may also be blocking local resume preferences.</p>
+          <button onClick={() => window.location.reload()} type="button">Reload dashboard</button>
+        </section>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 function App() {
   const [activeView, setActiveView] = useState<ViewKey>('dashboard');
@@ -76,44 +101,27 @@ function App() {
         ))}
       </nav>
 
-      <section className="workspace">
-        <div className="panel">{activeView === 'dashboard' && <Dashboard resume={resume} completion={completion} />}</div>
-        <div className="panel featured-panel">
-          {activeView === 'dashboard' && <ResumePreview accentColor={accentColor} resume={resume} />}
-          {activeView === 'editor' && <Editor resume={resume} setResume={setResume} updateSkill={updateSkill} />}
-          {activeView === 'templates' && <Templates accentColor={accentColor} setAccentColor={setAccentColor} />}
-          {activeView === 'export' && <ExportView resume={resume} />}
-        </div>
-      </section>
+      {activeView === 'dashboard' ? (
+        <section className="workspace workspace--dashboard" aria-label="Saved resumes">
+          <div className="panel featured-panel dashboard-panel">
+            <AppErrorBoundary>
+              <ResumeDashboard />
+            </AppErrorBoundary>
+          </div>
+        </section>
+      ) : (
+        <section className="workspace">
+          <div className="panel">
+            <ResumePreview accentColor={accentColor} resume={resume} />
+          </div>
+          <div className="panel featured-panel">
+            {activeView === 'editor' && <Editor resume={resume} setResume={setResume} updateSkill={updateSkill} />}
+            {activeView === 'templates' && <Templates accentColor={accentColor} setAccentColor={setAccentColor} />}
+            {activeView === 'export' && <ExportView resume={resume} />}
+          </div>
+        </section>
+      )}
     </main>
-  );
-}
-
-function Dashboard({ completion, resume }: { completion: number; resume: Resume }) {
-  const stats = [
-    { label: 'Drafts', value: '3' },
-    { label: 'Completion', value: `${completion}%` },
-    { label: 'Last update', value: resume.updatedAt },
-  ];
-
-  return (
-    <section>
-      <p className="eyebrow">Resume dashboard</p>
-      <h2>Keep every application organized.</h2>
-      <div className="stat-grid">
-        {stats.map((stat) => (
-          <article key={stat.label}>
-            <strong>{stat.value}</strong>
-            <span>{stat.label}</span>
-          </article>
-        ))}
-      </div>
-      <ul className="checklist">
-        <li>Review target role keywords</li>
-        <li>Tailor achievements to each job</li>
-        <li>Export PDF before applying</li>
-      </ul>
-    </section>
   );
 }
 
